@@ -65,12 +65,6 @@ const Settings = () => {
           </h1>
         </div>
 
-        {familyName && (
-          <p style={{ fontSize: 14, fontWeight: 600, color: "#7b6fa0", margin: 0 }}>
-            {familyName}
-          </p>
-        )}
-
         {/* Family code card */}
         <div style={{
           background: "rgba(255,255,255,0.42)",
@@ -81,6 +75,7 @@ const Settings = () => {
           flexDirection: "column",
           gap: 12,
           boxShadow: "inset 0 1px 0 rgba(255,255,255,0.55)",
+          marginTop: 20
         }}>
           <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
             <span style={{
@@ -92,14 +87,14 @@ const Settings = () => {
             </span>
             <span style={{
               fontSize: 13, fontWeight: 800, letterSpacing: 0.4,
-              textTransform: "uppercase", color: withAlpha(ACCENT, 0.85),
+              textTransform: "uppercase", color: withAlpha(ACCENT, 0.7),
             }}>
               Family Code
             </span>
           </div>
 
-          <p style={{ fontSize: 13, fontWeight: 600, color: "#9a8fb8", margin: 0, lineHeight: 1.5 }}>
-            Share this code with your partner so they can join your family.
+          <p style={{ fontSize: 13, fontWeight: 600, color: "#9a8fb8", margin: 0, lineHeight: 1.5, textAlign: 'left' }}>
+            Share this code with your partner so they can join <span style={{color: withAlpha(ACCENT, 1)}}>{familyName}</span>.
           </p>
 
           {/* Code display */}

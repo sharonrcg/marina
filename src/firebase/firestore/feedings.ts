@@ -13,10 +13,11 @@ import { addDoc, getDocs } from "firebase/firestore";
 // const fs = getFirestore(firebase_app);
 
 interface Feeding {
-  amount: number;
-  unit: string;
+  amount?: number;
+  unit?: string;
   time: Timestamp;
   type: string;
+  notes?: string;
 }
 
 export const addFeeding = async (
@@ -33,6 +34,11 @@ export const getLatestFeeding = async (babyRef: DocumentReference) => {
     limit(1)
   );
   return await getDocs(q);
+};
+
+export const getFeedings = async (babyRef: DocumentReference, n = 20) => {
+  const q = query(collection(babyRef, "feedings"), orderBy("time", "desc"), limit(n));
+  return getDocs(q);
 };
 
 // export const getBabies = async (userId) => {
