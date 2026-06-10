@@ -1,5 +1,5 @@
 :root {
-  font-family: Inter, system-ui, Avenir, Helvetica, Arial, sans-serif;
+  font-family: 'Nunito', Inter, system-ui, Avenir, Helvetica, Arial, sans-serif;
   line-height: 1.5;
   font-weight: 400;
 
@@ -22,12 +22,13 @@ a:hover {
   color: #535bf2;
 }
 
+html, 
 body {
   margin: 0;
-  display: flex;
-  place-items: center;
-  min-width: 320px;
-  min-height: 100vh;
+  padding: 0;
+  /* Ensure the absolute baseline of the page can grow indefinitely */
+  min-height: 100vh; 
+  height: auto !important; /* Overrides any fixed heights injected by frameworks */
 }
 
 h1 {
@@ -73,11 +74,9 @@ button:focus-visible {
 }
 
 #root {
-  background: rgb(217, 181, 255);
-  background: linear-gradient(
-    180deg,
-    rgba(217, 181, 255, 1) 0%,
-    rgba(151, 185, 255, 1) 100%
-  );
-  color: white;
+  /* REMOVE the background, gradient, and hardcoded height lines */
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  min-height: 100vh;
 }
