@@ -7,6 +7,7 @@ import {
   updateDoc,
   arrayUnion,
   arrayRemove,
+  deleteField,
   doc,
   getDoc,
   setDoc,
@@ -77,7 +78,10 @@ export const updateFamilyName = async (familyId: string, name: string) => {
 };
 
 export const removeFamilyMember = async (familyId: string, userId: string) => {
-  await updateDoc(doc(fs, "families", familyId), { parents: arrayRemove(userId) });
+  const batch = writeBatch(fs);
+  batch.update(doc(fs, "families", familyId), { parents: arrayRemove(userId) });
+  batch.update(doc(fs, "users", userId), { family: deleteField() });
+  await batch.commit();
 };
 
 export const updateBaby = async (babyRef: DocumentReference, data: Partial<Baby>) => {

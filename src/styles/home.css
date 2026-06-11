@@ -554,6 +554,11 @@
   font-family: 'Nunito', inherit;
 }
 
+/* Hero chip visibility */
+.hero-age-text  { display: none; }
+.hero-chips-mobile { display: flex; }
+.hero-chips-desktop { display: none; }
+
 /* Mobile: hero section */
 .home-hero {
   display: flex;
@@ -682,6 +687,10 @@
   .home-hero {
     margin-bottom: 0;
   }
+
+  .hero-age-text  { display: block; }
+  .hero-chips-mobile { display: none; }
+  .hero-chips-desktop { display: flex; }
 
   /* Desktop activity card header — top-align emoji with taller content */
   .activity-row-header {

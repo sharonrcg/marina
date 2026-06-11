@@ -656,6 +656,9 @@ const Home = () => {
   const [familyName, setFamilyName] = useState<string>();
   const [toast, setToast] = useState<{ label: string; emoji: string } | null>(null);
 
+  const [switcherOpen, setSwitcherOpen] = useState(false);
+  const switcherRef = useRef<HTMLDivElement>(null);
+
   const [feedingOpen,  setFeedingOpen]  = useState(false);
   const [vitaminOpen,  setVitaminOpen]  = useState(false);
   const [sleepOpen,    setSleepOpen]    = useState(false);
@@ -760,6 +763,17 @@ const Home = () => {
       .finally(() => setLoadingAllHistory(false));
   }, [allHistoryOpen, babyRef?.path]);
 
+  useEffect(() => {
+    if (!switcherOpen) return;
+    const handler = (e: MouseEvent) => {
+      if (switcherRef.current && !switcherRef.current.contains(e.target as Node)) {
+        setSwitcherOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, [switcherOpen]);
+
   const showToast = (label: string, emoji: string) => {
     setToast({ label, emoji });
     clearTimeout(toastTimer.current);
@@ -847,6 +861,15 @@ const Home = () => {
   recentEntries.sort((a, b) => b.ts.toDate().getTime() - a.ts.toDate().getTime());
   const top3 = recentEntries.slice(0, 3);
 
+  const heroChip: React.CSSProperties = {
+    display: "inline-flex", alignItems: "center", gap: 6,
+    padding: "6px 14px", borderRadius: 999,
+    background: "rgba(255,255,255,0.65)",
+    border: "1px solid rgba(255,255,255,0.85)",
+    backdropFilter: "blur(8px)",
+    fontSize: 13, fontWeight: 700, color: "#473a68",
+  };
+
   return (
     <div id="home">
       <div id="home-scroll">
@@ -899,8 +922,89 @@ const Home = () => {
                   </div>
                 ) : baby ? (
                   <>
-                    <div style={{ fontSize: 26, fontWeight: 900, color: "#473a68", letterSpacing: -0.5 }}>{baby.name}</div>
-                    {baby.dob && <div style={{ marginTop: 4, fontSize: 14, fontWeight: 700, color: "#6f6291" }}>{getAge(baby.dob)}</div>}
+                    {babies.length > 1 ? (
+                      <div style={{ position: "relative", display: "inline-block" }} ref={switcherRef}>
+                        <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }}>
+                          <div style={{ fontSize: 26, fontWeight: 900, color: "#473a68", letterSpacing: -0.5 }}>{baby.name}</div>
+                          <button
+                            type="button"
+                            onClick={() => setSwitcherOpen((o) => !o)}
+                            style={{
+                              width: 28, height: 28, borderRadius: "50%", border: "none", cursor: "pointer",
+                              background: withAlpha(ACCENT, 0.12),
+                              display: "flex", alignItems: "center", justifyContent: "center",
+                              flexShrink: 0, transition: "background 0.15s",
+                              fontSize: 13, color: ACCENT,
+                              transform: switcherOpen ? "rotate(180deg)" : "none",
+                            }}
+                          >
+                            ▾
+                          </button>
+                        </div>
+                        {switcherOpen && (
+                          <div style={{
+                            position: "absolute", top: "calc(100% + 10px)", left: "50%", transform: "translateX(-50%)",
+                            background: "#fff", borderRadius: 18, zIndex: 20, minWidth: 220,
+                            boxShadow: "0 8px 32px -8px rgba(76,52,120,0.28), 0 2px 8px rgba(76,52,120,0.1)",
+                            padding: 8, display: "flex", flexDirection: "column", gap: 4,
+                          }}>
+                            {babies.map((b, i) => (
+                              <button
+                                key={i}
+                                type="button"
+                                onClick={() => { setActiveIndex(i); setSwitcherOpen(false); }}
+                                style={{
+                                  display: "flex", alignItems: "center", gap: 12,
+                                  padding: "10px 12px", borderRadius: 12, border: "none", cursor: "pointer",
+                                  fontFamily: "inherit", textAlign: "left", width: "100%",
+                                  background: i === activeIndex ? withAlpha(ACCENT, 0.08) : "transparent",
+                                }}
+                              >
+                                <div style={{
+                                  width: 44, height: 44, borderRadius: "50%", flexShrink: 0, overflow: "hidden",
+                                  background: `linear-gradient(135deg, ${withAlpha(ACCENT, 0.9)}, ${withAlpha("#5a8def", 0.9)})`,
+                                  display: "flex", alignItems: "center", justifyContent: "center",
+                                }}>
+                                  {b.picture
+                                    ? <img src={b.picture} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                                    : <span style={{ fontSize: 22 }}>{babyEmoji(b.gender)}</span>
+                                  }
+                                </div>
+                                <div>
+                                  <div style={{ fontSize: 15, fontWeight: 800, color: "#473a68" }}>{b.name}</div>
+                                  {b.dob && <div style={{ fontSize: 12, fontWeight: 700, color: "#9a8fb8", marginTop: 1 }}>{getAge(b.dob)}</div>}
+                                </div>
+                              </button>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    ) : (
+                      <div style={{ fontSize: 26, fontWeight: 900, color: "#473a68", letterSpacing: -0.5 }}>{baby.name}</div>
+                    )}
+                    {/* Age text — desktop only */}
+                    {baby.dob && (
+                      <div className="hero-age-text" style={{ marginTop: 4, fontSize: 14, fontWeight: 700, color: "#6f6291" }}>
+                        {getAge(baby.dob)}
+                      </div>
+                    )}
+
+                    {/* Desktop chips: birthday + gender with emojis */}
+                    {(baby.dob || baby.gender) && (
+                      <div className="hero-chips-desktop" style={{ gap: 8, justifyContent: "center", flexWrap: "wrap", marginTop: 12 }}>
+                        {baby.dob && <div style={heroChip}>🎂 {new Date(baby.dob + "T12:00:00").toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}</div>}
+                        {baby.gender && <div style={heroChip}>{baby.gender === "boy" ? "👦" : "👧"} {(baby.gender as string).charAt(0).toUpperCase() + (baby.gender as string).slice(1)}</div>}
+                      </div>
+                    )}
+
+                    {/* Mobile chips: gender, date, age — no emojis */}
+                    {(baby.dob || baby.gender) && (
+                      <div className="hero-chips-mobile" style={{ gap: 8, justifyContent: "center", flexWrap: "wrap", marginTop: 12 }}>
+                        {baby.gender && <div style={heroChip}>{(baby.gender as string).charAt(0).toUpperCase() + (baby.gender as string).slice(1)}</div>}
+                        {baby.dob && <div style={heroChip}>{new Date(baby.dob + "T12:00:00").toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}</div>}
+                        {baby.dob && <div style={heroChip}>{getAge(baby.dob)}</div>}
+                      </div>
+                    )}
                   </>
                 ) : null}
               </div>

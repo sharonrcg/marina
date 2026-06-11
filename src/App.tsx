@@ -4,7 +4,6 @@ import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
 import { useContext } from "react";
 import { AuthContext } from "./context";
 import { FamilyCreate, Logout, Welcome, Settings } from "./pages";
-import { NavDrawer } from "./components";
 
 // Requires: logged in + has family. Redirects otherwise.
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
@@ -33,12 +32,9 @@ function PublicRoute({ children }: { children: React.ReactNode }) {
 }
 
 function App() {
-  const { user } = useContext(AuthContext);
-
   return (
     <BrowserRouter>
-      {user && <NavDrawer user={user} />}
-      <div id="app">
+<div id="app">
         <Routes>
           <Route path="/" element={<ProtectedRoute><Home /></ProtectedRoute>} />
           <Route path="/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
