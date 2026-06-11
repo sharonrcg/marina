@@ -24,6 +24,11 @@ export const linkUserFamily = async (
   await setDoc(doc(fs, "users", userId), { family: familyRef }, { merge: true });
 };
 
+export const hasLinkedFamily = async (userId: string): Promise<boolean> => {
+  const snap = await getDoc(doc(fs, "users", userId));
+  return !!snap.data()?.family;
+};
+
 export const getLinkedFamily = async (userId: string) => {
   const userDocRef = await getDoc(doc(fs, "users", userId));
   const familyRef: DocumentReference | undefined = userDocRef.data()?.family;
@@ -32,6 +37,21 @@ export const getLinkedFamily = async (userId: string) => {
 
   const familyDoc = await getDoc(familyRef);
   return { id: familyRef.id, name: familyDoc.data()?.name as string | undefined };
+};
+
+export const getLinkedFamilyFull = async (userId: string) => {
+  const userDocRef = await getDoc(doc(fs, "users", userId));
+  const familyRef: DocumentReference | undefined = userDocRef.data()?.family;
+  if (!familyRef) throw "No Linked Family";
+  const familyDoc = await getDoc(familyRef);
+  const data = familyDoc.data();
+  return {
+    id: familyRef.id,
+    ref: familyRef,
+    name: data?.name as string | undefined,
+    adminId: data?.adminId as string | undefined,
+    parents: (data?.parents as string[]) ?? [],
+  };
 };
 
 export const getBabies = async (userId) => {

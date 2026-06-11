@@ -1,12 +1,37 @@
 import "./App.css";
 import { Auth, FamilyJoin, Home } from "./pages";
-import { BrowserRouter, Route, Routes } from "react-router-dom";
+import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
 import { useContext } from "react";
 import { AuthContext } from "./context";
 import { FamilyCreate, Logout, Welcome, Settings } from "./pages";
 import { NavDrawer } from "./components";
 
-// todo - move nav code to its own component
+// Requires: logged in + has family. Redirects otherwise.
+function ProtectedRoute({ children }: { children: React.ReactNode }) {
+  const { user, hasFamily, authLoading } = useContext(AuthContext);
+  if (authLoading) return null;
+  if (!user) return <Navigate to="/welcome" replace />;
+  if (!hasFamily) return <Navigate to="/family/new" replace />;
+  return <>{children}</>;
+}
+
+// Requires: logged in + no family. Redirects otherwise.
+function NoFamilyRoute({ children }: { children: React.ReactNode }) {
+  const { user, hasFamily, authLoading } = useContext(AuthContext);
+  if (authLoading) return null;
+  if (!user) return <Navigate to="/welcome" replace />;
+  if (hasFamily) return <Navigate to="/" replace />;
+  return <>{children}</>;
+}
+
+// Requires: not logged in. Redirects logged-in users to the right place.
+function PublicRoute({ children }: { children: React.ReactNode }) {
+  const { user, hasFamily, authLoading } = useContext(AuthContext);
+  if (authLoading) return null;
+  if (user) return <Navigate to={hasFamily ? "/" : "/family/new"} replace />;
+  return <>{children}</>;
+}
+
 function App() {
   const { user } = useContext(AuthContext);
 
@@ -15,14 +40,17 @@ function App() {
       {user && <NavDrawer user={user} />}
       <div id="app">
         <Routes>
-          <Route path="/" element={<Home />} />
-          <Route path="/signup" element={<Auth />} />
-          <Route path="/login" element={<Auth isLoggingIn />} />
-          <Route path="/family/new" element={<FamilyCreate />} />
-          <Route path="/family/join" element={<FamilyJoin />} />
+          <Route path="/" element={<ProtectedRoute><Home /></ProtectedRoute>} />
+          <Route path="/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
+
+          <Route path="/family/new" element={<NoFamilyRoute><FamilyCreate /></NoFamilyRoute>} />
+          <Route path="/family/join" element={<NoFamilyRoute><FamilyJoin /></NoFamilyRoute>} />
+
+          <Route path="/welcome" element={<PublicRoute><Welcome /></PublicRoute>} />
+          <Route path="/signup" element={<PublicRoute><Auth /></PublicRoute>} />
+          <Route path="/login" element={<PublicRoute><Auth isLoggingIn /></PublicRoute>} />
+
           <Route path="/logout" element={<Logout />} />
-          <Route path="/welcome" element={<Welcome />} />
-          <Route path="/settings" element={<Settings />} />
         </Routes>
       </div>
     </BrowserRouter>

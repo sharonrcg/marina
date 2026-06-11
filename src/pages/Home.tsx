@@ -136,39 +136,64 @@ function ActivityRow({
         boxShadow: pressed
           ? `0 4px 14px -6px ${withAlpha(color, 0.5)}, inset 0 0 0 1.5px ${withAlpha(color, 0.5)}`
           : "inset 0 1px 0 rgba(255,255,255,0.6), 0 8px 22px -14px rgba(76,52,120,0.4)",
+        minHeight: "139px",
       }}
     >
-      <span style={{
-        display: "inline-flex", alignItems: "center", justifyContent: "center",
-        width: 46, height: 46, borderRadius: 14, fontSize: 22, flexShrink: 0,
-        background: withAlpha(color, 0.16),
-        boxShadow: "inset 0 1px 0 rgba(255,255,255,0.5)",
-      }}>
-        {emoji}
-      </span>
+      <div className="activity-row-header">
+        <span style={{
+          display: "inline-flex", alignItems: "center", justifyContent: "center",
+          width: 46, height: 46, borderRadius: 14, fontSize: 22, flexShrink: 0,
+          background: withAlpha(color, 0.16),
+          boxShadow: "inset 0 1px 0 rgba(255,255,255,0.5)",
+        }}>
+          {emoji}
+        </span>
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between" }}>
+            <span style={{ fontSize: 16, fontWeight: 800, color: "#473a68" }}>{label}</span>
+            <span style={{
+              fontSize: 15, fontWeight: 900, letterSpacing: -0.2, flexShrink: 0, marginLeft: 8,
+              color: value === "—" ? "#c2b8da" : "#473a68",
+            }}>
+              {value}
+            </span>
+          </div>
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginTop: 3 }}>
+            <span style={{ fontSize: 12, fontWeight: 700, color: "#9a8fb8" }}>
+              {statLabel}{sub ? ` · ${sub}` : ""}
+            </span>
+            <button
+              type="button"
+              className="view-all-btn activity-mobile-view-all"
+              onClick={(e) => { e.stopPropagation(); onViewAll(); }}
+            >
+              View all ›
+            </button>
+          </div>
+        </div>
+      </div>
 
-      <div style={{ flex: 1, minWidth: 0 }}>
-        <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between" }}>
-          <span style={{ fontSize: 16, fontWeight: 800, color: "#473a68" }}>{label}</span>
-          <span style={{
-            fontSize: 15, fontWeight: 900, letterSpacing: -0.2, flexShrink: 0, marginLeft: 8,
-            color: value === "—" ? "#c2b8da" : "#473a68",
-          }}>
-            {value}
-          </span>
-        </div>
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginTop: 3 }}>
-          <span style={{ fontSize: 12, fontWeight: 700, color: "#9a8fb8" }}>
-            {statLabel}{sub ? ` · ${sub}` : ""}
-          </span>
-          <button
-            type="button"
-            className="view-all-btn"
-            onClick={(e) => { e.stopPropagation(); onViewAll(); }}
-          >
-            View all ›
-          </button>
-        </div>
+      {/* Desktop-only footer buttons */}
+      <div className="activity-card-footer">
+        <button
+          type="button"
+          className="activity-log-btn"
+          style={{
+            background: `linear-gradient(135deg, ${color}, ${withAlpha(color, 0.82)})`,
+            boxShadow: `0 8px 18px -8px ${withAlpha(color, 0.6)}`,
+          }}
+          onClick={(e) => { e.stopPropagation(); onClick(); }}
+        >
+          <span style={{ fontSize: 16, lineHeight: 1 }}>+</span> Log {label.toLowerCase()}
+        </button>
+        <button
+          type="button"
+          className="activity-view-btn"
+          style={{ color, background: withAlpha(color, 0.12) }}
+          onClick={(e) => { e.stopPropagation(); onViewAll(); }}
+        >
+          View all
+        </button>
       </div>
     </div>
   );
@@ -212,7 +237,7 @@ function WhenField({
 // ─── FeedingSheet ─────────────────────────────────────────────────────────────
 
 const FEED_TYPES = [
-  { key: "breast",  label: "Breastmilk", emoji: "🤱" },
+  { key: "breastmilk",  label: "Breastmilk", emoji: "🤱" },
   { key: "formula", label: "Formula", emoji: "🍼" },
   { key: "solids",  label: "Solids",  emoji: "🥄" },
 ] as const;
@@ -225,7 +250,7 @@ function FeedingSheet({ onClose, onSave }: {
   onSave: (d: { amount?: number; unit?: string; type: string; time: Timestamp; notes?: string }) => void;
 }) {
   const [when, setWhen] = useState<"now" | "earlier">("now");
-  const [feedType, setFeedType] = useState<FeedType>("breast");
+  const [feedType, setFeedType] = useState<FeedType>("breastmilk");
   const [unit, setUnit] = useState<"ml" | "oz">("ml");
   const [amount, setAmount] = useState("");
   const [notes, setNotes] = useState("");
@@ -543,6 +568,82 @@ function HistorySheet({ activityKey, items, loading, onClose }: {
   );
 }
 
+// ─── AllHistorySheet ──────────────────────────────────────────────────────────
+
+type AllHistoryEntry = { activityKey: ActivityKey; data: DocumentData };
+
+function AllHistorySheet({ babyName, items, loading, onClose }: {
+  babyName: string; items: AllHistoryEntry[]; loading: boolean; onClose: () => void;
+}) {
+  const renderItem = (entry: AllHistoryEntry, i: number) => {
+    const activity = ACTIVITIES.find((a) => a.key === entry.activityKey)!;
+    const { data } = entry;
+    let detail = "";
+    let ts: Timestamp;
+
+    if (entry.activityKey === "feed") {
+      ts = data.time as Timestamp;
+      detail = data.type === "solids" ? (data.notes || "Solids") : `${data.amount ?? ""}${data.unit ?? ""} · ${data.type}`;
+    } else if (entry.activityKey === "pump") {
+      ts = data.time as Timestamp;
+      detail = data.amount ? `${data.name} · ${data.amount}${data.unit}` : data.name;
+    } else if (entry.activityKey === "sleep") {
+      ts = data.end as Timestamp;
+      detail = `${fmtTime(data.start as Timestamp)} – ${fmtTime(data.end as Timestamp)} · ${fmtDuration(data.start as Timestamp, data.end as Timestamp)}`;
+    } else {
+      ts = data.time as Timestamp;
+      detail = (data.type as string).charAt(0).toUpperCase() + (data.type as string).slice(1);
+    }
+
+    return (
+      <div key={i} className="recent-activity-item">
+        <span style={{
+          display: "inline-flex", alignItems: "center", justifyContent: "center",
+          width: 44, height: 44, borderRadius: 14, fontSize: 22, flexShrink: 0,
+          background: withAlpha(activity.color, 0.16),
+          boxShadow: "inset 0 1px 0 rgba(255,255,255,0.5)",
+        }}>
+          {activity.emoji}
+        </span>
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div style={{ fontSize: 15, fontWeight: 800, color: "#473a68" }}>{activity.label}</div>
+          <div style={{ fontSize: 13, fontWeight: 700, color: "#9a8fb8", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{detail}</div>
+        </div>
+        <div style={{ fontSize: 13, fontWeight: 700, color: "#7b6fa0", flexShrink: 0, textAlign: "right" }}>{fmtDateTime(ts)}</div>
+      </div>
+    );
+  };
+
+  return (
+    <>
+      <div className="sheet-backdrop" onClick={onClose} />
+      <div className="feeding-sheet history-sheet all-history-modal">
+        <div className="sheet-handle" />
+        <div className="sheet-header">
+          <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+            <span className="sheet-icon">📋</span>
+            <span className="sheet-title">{babyName}'s history</span>
+          </div>
+          <button className="sheet-close" type="button" onClick={onClose}>✕</button>
+        </div>
+        <div className="history-list">
+          {loading ? (
+            <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+              {[1, 2, 3, 4, 5].map((i) => <Shimmer key={i} width="100%" height={64} radius={14} />)}
+            </div>
+          ) : items.length === 0 ? (
+            <div style={{ textAlign: "center", padding: "32px 0", fontSize: 14, fontWeight: 700, color: "#9a8fb8" }}>
+              Nothing logged yet
+            </div>
+          ) : (
+            items.map(renderItem)
+          )}
+        </div>
+      </div>
+    </>
+  );
+}
+
 // ─── Home ─────────────────────────────────────────────────────────────────────
 
 type ActivityMap = Record<string, DocumentData | null>;
@@ -569,6 +670,10 @@ const Home = () => {
   const [historyKey,   setHistoryKey]   = useState<ActivityKey | null>(null);
   const [historyItems, setHistoryItems] = useState<DocumentData[]>([]);
   const [loadingHistory, setLoadingHistory] = useState(false);
+
+  const [allHistoryOpen,    setAllHistoryOpen]    = useState(false);
+  const [allHistoryItems,   setAllHistoryItems]   = useState<AllHistoryEntry[]>([]);
+  const [loadingAllHistory, setLoadingAllHistory] = useState(false);
 
   const toastTimer = useRef<ReturnType<typeof setTimeout>>();
   const auth = useContext(AuthContext);
@@ -638,6 +743,30 @@ const Home = () => {
       .finally(() => setLoadingHistory(false));
   }, [historyKey, babyRef?.path]);
 
+  // Load all history across all activity types when the full-history modal opens
+  useEffect(() => {
+    if (!allHistoryOpen || !babyRef) return;
+    setLoadingAllHistory(true);
+    setAllHistoryItems([]);
+    Promise.all([
+      getFeedings(babyRef).then((r) => r.docs.map((d): AllHistoryEntry => ({ activityKey: "feed",   data: d.data() }))),
+      getVitamins(babyRef).then((r) => r.docs.map((d): AllHistoryEntry => ({ activityKey: "pump",   data: d.data() }))),
+      getSleeps(babyRef).then((r)   => r.docs.map((d): AllHistoryEntry => ({ activityKey: "sleep",  data: d.data() }))),
+      getDiapers(babyRef).then((r)  => r.docs.map((d): AllHistoryEntry => ({ activityKey: "diaper", data: d.data() }))),
+    ])
+      .then(([feeds, vitamins, sleeps, diapers]) => {
+        const all = [...feeds, ...vitamins, ...sleeps, ...diapers];
+        all.sort((a, b) => {
+          const tsA = (a.activityKey === "sleep" ? (a.data.end as Timestamp) : (a.data.time as Timestamp)).toDate().getTime();
+          const tsB = (b.activityKey === "sleep" ? (b.data.end as Timestamp) : (b.data.time as Timestamp)).toDate().getTime();
+          return tsB - tsA;
+        });
+        setAllHistoryItems(all);
+      })
+      .catch(() => {})
+      .finally(() => setLoadingAllHistory(false));
+  }, [allHistoryOpen, babyRef?.path]);
+
   const showToast = (label: string, emoji: string) => {
     setToast({ label, emoji });
     clearTimeout(toastTimer.current);
@@ -704,12 +833,33 @@ const Home = () => {
     { ...ACTIVITIES[3], value: fmtAgo(lastDiaper?.time as Timestamp | undefined), sub: diaperSub },
   ];
 
+  // Derive recent entries from the already-loaded "latest" items, sorted newest-first
+  const recentEntries: Array<{ activityKey: ActivityKey; ts: Timestamp; detail: string }> = [];
+  if (lastFed?.time) {
+    const detail = lastFed.type === "solids" ? (lastFed.notes || "Solids") : `${lastFed.amount ?? ""}${lastFed.unit ?? ""} · ${lastFed.type}`;
+    recentEntries.push({ activityKey: "feed", ts: lastFed.time as Timestamp, detail });
+  }
+  if (lastVit?.time) {
+    const detail = lastVit.amount ? `${lastVit.name} · ${lastVit.amount}${lastVit.unit}` : lastVit.name;
+    recentEntries.push({ activityKey: "pump", ts: lastVit.time as Timestamp, detail });
+  }
+  if (lastSleep?.end) {
+    const detail = `Nap · ${fmtDuration(lastSleep.start as Timestamp, lastSleep.end as Timestamp)}`;
+    recentEntries.push({ activityKey: "sleep", ts: lastSleep.end as Timestamp, detail });
+  }
+  if (lastDiaper?.time) {
+    const detail = (lastDiaper.type as string).charAt(0).toUpperCase() + (lastDiaper.type as string).slice(1);
+    recentEntries.push({ activityKey: "diaper", ts: lastDiaper.time as Timestamp, detail });
+  }
+  recentEntries.sort((a, b) => b.ts.toDate().getTime() - a.ts.toDate().getTime());
+  const top3 = recentEntries.slice(0, 3);
+
   return (
     <div id="home">
       <div id="home-scroll">
 
         {/* Top bar */}
-        <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", marginBottom: 18 }}>
+        <div className="home-top-bar" style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", marginBottom: 18 }}>
           <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
             <div style={{ fontSize: 22, fontWeight: 900, color: "#473a68", letterSpacing: -0.3, lineHeight: 1.2, textAlign: "left" }}>
               Hello, {userName || "there"}
@@ -723,65 +873,112 @@ const Home = () => {
           </button>
         </div>
 
-        {/* Baby tabs */}
-        {!loadingBabies && (
-          <div className="baby-tabs">
-            {babies.map((b, i) => (
-              <button key={i} className={`baby-tab${i === activeIndex ? " active" : ""}`} onClick={() => setActiveIndex(i)}>
-                {b.name}
-              </button>
-            ))}
-            <button className="baby-tab baby-tab-add" type="button" onClick={() => {}}>+</button>
-          </div>
-        )}
+        <div className="home-body">
 
-        {/* Hero */}
-        <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 10, marginBottom: 26 }}>
-          <div style={{
-            padding: 5, borderRadius: "50%",
-            background: `linear-gradient(135deg, ${withAlpha(ACCENT, 0.9)}, ${withAlpha("#5a8def", 0.9)})`,
-            boxShadow: `0 14px 30px -10px ${withAlpha(ACCENT, 0.6)}`,
-          }}>
-            {loadingBabies ? (
-              <div style={{ width: 104, height: 104, borderRadius: "50%", border: "3px solid rgba(255,255,255,0.9)", overflow: "hidden" }}>
-                <div className="shimmer" style={{ width: "100%", height: "100%" }}><div className="shimmer-wave" /></div>
-              </div>
-            ) : baby?.picture ? (
-              <img src={baby.picture} style={{ width: 104, height: 104, borderRadius: "50%", border: "3px solid rgba(255,255,255,0.9)", objectFit: "cover", display: "block" }} />
-            ) : (
-              <div style={{ width: 104, height: 104, borderRadius: "50%", border: "3px solid rgba(255,255,255,0.9)", background: withAlpha(ACCENT, 0.15), display: "flex", alignItems: "center", justifyContent: "center", fontSize: 52 }}>
-                {babyEmoji(baby?.gender)}
+          {/* Left panel: baby tabs + hero */}
+          <div className="home-left-panel">
+
+            {/* Baby tabs */}
+            {!loadingBabies && (
+              <div className="baby-tabs">
+                {babies.map((b, i) => (
+                  <button key={i} className={`baby-tab${i === activeIndex ? " active" : ""}`} onClick={() => setActiveIndex(i)}>
+                    {b.name}
+                  </button>
+                ))}
+                <button className="baby-tab baby-tab-add" type="button" onClick={() => {}}>+</button>
               </div>
             )}
+
+            {/* Hero */}
+            <div className="home-hero">
+              <div style={{
+                padding: 6, borderRadius: 36,
+                background: `linear-gradient(135deg, ${withAlpha(ACCENT, 0.9)}, ${withAlpha("#5a8def", 0.9)})`,
+                boxShadow: `0 14px 30px -10px ${withAlpha(ACCENT, 0.6)}`,
+              }}>
+                {loadingBabies ? (
+                  <div style={{ width: 130, height: 130, borderRadius: 30, border: "3px solid rgba(255,255,255,0.9)", overflow: "hidden" }}>
+                    <div className="shimmer" style={{ width: "100%", height: "100%" }}><div className="shimmer-wave" /></div>
+                  </div>
+                ) : baby?.picture ? (
+                  <img src={baby.picture} style={{ width: 130, height: 130, borderRadius: 30, border: "3px solid rgba(255,255,255,0.9)", objectFit: "cover", display: "block" }} />
+                ) : (
+                  <div style={{ width: 130, height: 130, borderRadius: 30, border: "3px solid rgba(255,255,255,0.9)", background: withAlpha(ACCENT, 0.15), display: "flex", alignItems: "center", justifyContent: "center", fontSize: 62 }}>
+                    {babyEmoji(baby?.gender)}
+                  </div>
+                )}
+              </div>
+
+              <div style={{ textAlign: "center", minHeight: 52 }}>
+                {loadingBabies ? (
+                  <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 8, paddingTop: 4 }}>
+                    <Shimmer width={120} height={26} radius={8} />
+                    <Shimmer width={80} height={16} radius={6} />
+                  </div>
+                ) : baby ? (
+                  <>
+                    <div style={{ fontSize: 26, fontWeight: 900, color: "#473a68", letterSpacing: -0.5 }}>{baby.name}</div>
+                    {baby.dob && <div style={{ marginTop: 4, fontSize: 14, fontWeight: 700, color: "#6f6291" }}>{getAge(baby.dob)}</div>}
+                  </>
+                ) : null}
+              </div>
+            </div>
+
           </div>
 
-          <div style={{ textAlign: "center", minHeight: 52 }}>
-            {loadingBabies ? (
-              <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 8, paddingTop: 4 }}>
-                <Shimmer width={120} height={26} radius={8} />
-                <Shimmer width={80} height={16} radius={6} />
-              </div>
-            ) : baby ? (
-              <>
-                <div style={{ fontSize: 26, fontWeight: 900, color: "#473a68", letterSpacing: -0.5 }}>{baby.name}</div>
-                {baby.dob && <div style={{ marginTop: 4, fontSize: 14, fontWeight: 700, color: "#6f6291" }}>{getAge(baby.dob)}</div>}
-              </>
-            ) : null}
+          {/* Right panel: activity grid */}
+          <div className="home-right-panel">
+            <div className="activity-grid">
+              {rows.map((r) => (
+                <ActivityRow
+                  key={r.key}
+                  emoji={r.emoji} color={r.color} label={r.label} statLabel={r.statLabel}
+                  value={r.value} sub={r.sub}
+                  pressed={false}
+                  onClick={() => handleAction(r)}
+                  onViewAll={() => setHistoryKey(r.key)}
+                />
+              ))}
+            </div>
           </div>
+
         </div>
 
-        {/* Activity rows */}
-        <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-          {rows.map((r) => (
-            <ActivityRow
-              key={r.key}
-              emoji={r.emoji} color={r.color} label={r.label} statLabel={r.statLabel}
-              value={r.value} sub={r.sub}
-              pressed={false}
-              onClick={() => handleAction(r)}
-              onViewAll={() => setHistoryKey(r.key)}
-            />
-          ))}
+        {/* Recent Activity — desktop only */}
+        <div className="home-recent-activity">
+          <div className="home-section-header">
+            <span className="home-section-title">Recent Activity</span>
+            <button className="view-all-history-btn" type="button" onClick={() => setAllHistoryOpen(true)}>
+              View all history ›
+            </button>
+          </div>
+          <div className="recent-activity-card">
+            {top3.length === 0 ? (
+              <div style={{ textAlign: "center", padding: "20px 0", fontSize: 13, fontWeight: 700, color: "#9a8fb8" }}>
+                Nothing logged yet
+              </div>
+            ) : top3.map((entry, i) => {
+              const activity = ACTIVITIES.find((a) => a.key === entry.activityKey)!;
+              return (
+                <div key={i} className="recent-activity-item">
+                  <span style={{
+                    display: "inline-flex", alignItems: "center", justifyContent: "center",
+                    width: 44, height: 44, borderRadius: 14, fontSize: 22, flexShrink: 0,
+                    background: withAlpha(activity.color, 0.16),
+                    boxShadow: "inset 0 1px 0 rgba(255,255,255,0.5)",
+                  }}>
+                    {activity.emoji}
+                  </span>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ fontSize: 15, fontWeight: 800, color: "#473a68" }}>{activity.label}</div>
+                    <div style={{ fontSize: 13, fontWeight: 700, color: "#9a8fb8", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{entry.detail}</div>
+                  </div>
+                  <div style={{ fontSize: 13.5, fontWeight: 800, color: "#7b6fa0", flexShrink: 0 }}>{fmtAgo(entry.ts)}</div>
+                </div>
+              );
+            })}
+          </div>
         </div>
 
       </div>
@@ -796,6 +993,14 @@ const Home = () => {
           items={historyItems}
           loading={loadingHistory}
           onClose={() => { setHistoryKey(null); setHistoryItems([]); }}
+        />
+      )}
+      {allHistoryOpen && (
+        <AllHistorySheet
+          babyName={baby?.name ?? ""}
+          items={allHistoryItems}
+          loading={loadingAllHistory}
+          onClose={() => { setAllHistoryOpen(false); setAllHistoryItems([]); }}
         />
       )}
 

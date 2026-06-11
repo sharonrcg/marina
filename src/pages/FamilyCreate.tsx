@@ -48,6 +48,7 @@ const Family = () => {
 
     const familyRef = await createFamily(familyName, babies, userId, email);
     await linkUserFamily(userId, familyRef);
+    await auth.refreshFamilyStatus();
     navigate("/");
   };
 

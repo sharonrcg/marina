@@ -50,6 +50,13 @@
 .layout-buttons a { padding: 0.3rem 0; }
 .layout-buttons button { width: 100%; }
 
+/* ── Desktop-only width override ── */
+@media (min-width: 768px) {
+  .layout-content-wide {
+    width: min(800px, 100%);
+  }
+}
+
 /* ── Mobile ── */
 @media (max-width: 767px) {
   .layout {

@@ -1,9 +1,11 @@
 "use client";
 
-import { useState } from "react";
+import { useContext, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import "../styles/layout.css";
 import "../styles/family-create.css";
+import { AuthContext } from "../context/AuthContext";
+import { joinFamily } from "../firebase/firestore/family";
 
 const ACCENT = "#8b5cf6";
 
@@ -25,12 +27,30 @@ function shade(hex: string) {
 
 const FamilyJoin = () => {
   const [familyID, setFamilyID] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const auth = useContext(AuthContext);
   const navigate = useNavigate();
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    // TODO: joinFamily(familyID)
-    navigate("/");
+    const userId = auth?.user?.uid;
+    if (!userId) return;
+
+    const trimmed = familyID.trim();
+    if (!trimmed) return;
+
+    setLoading(true);
+    setError(null);
+    try {
+      await joinFamily(trimmed, userId);
+      await auth.refreshFamilyStatus();
+      navigate("/");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Something went wrong. Check the code and try again.");
+    } finally {
+      setLoading(false);
+    }
   };
 
   const inputStyle: React.CSSProperties = {
@@ -121,48 +141,57 @@ const FamilyJoin = () => {
               style={inputStyle}
               placeholder="Paste the ID here"
               value={familyID}
-              onChange={(e) => setFamilyID(e.target.value)}
+              onChange={(e) => { setFamilyID(e.target.value); setError(null); }}
               onFocus={(e) => {
                 e.target.style.borderColor = withAlpha(ACCENT, 0.55);
                 e.target.style.boxShadow = `0 0 0 4px ${withAlpha(ACCENT, 0.14)}`;
                 e.target.style.background = "rgba(255,255,255,0.9)";
               }}
               onBlur={(e) => {
-                e.target.style.borderColor = "rgba(139,92,246,0.2)";
+                e.target.style.borderColor = error ? "rgba(239,68,68,0.5)" : "rgba(139,92,246,0.2)";
                 e.target.style.boxShadow = "none";
                 e.target.style.background = "rgba(255,255,255,0.66)";
               }}
             />
+            {error && (
+              <div style={{ fontSize: 13, fontWeight: 700, color: "#ef4444", paddingLeft: 4 }}>
+                {error}
+              </div>
+            )}
           </div>
 
           {/* Submit */}
           <button
             type="submit"
+            disabled={loading || !familyID.trim()}
             style={{
               width: "100%",
               padding: "16px",
               fontFamily: "inherit",
               fontSize: 17,
               fontWeight: 800,
-              cursor: "pointer",
+              cursor: loading || !familyID.trim() ? "default" : "pointer",
               color: "#fff",
               background: `linear-gradient(135deg, ${ACCENT} 0%, ${shade(ACCENT)} 100%)`,
               border: "none",
               borderRadius: 16,
               boxShadow: `0 14px 28px -10px ${withAlpha(ACCENT, 0.7)}`,
-              transition: "transform .15s, box-shadow .15s",
+              transition: "transform .15s, box-shadow .15s, opacity .15s",
               letterSpacing: 0.2,
+              opacity: loading || !familyID.trim() ? 0.6 : 1,
             }}
             onMouseEnter={(e) => {
-              e.currentTarget.style.transform = "translateY(-2px)";
-              e.currentTarget.style.boxShadow = `0 20px 34px -10px ${withAlpha(ACCENT, 0.8)}`;
+              if (!loading && familyID.trim()) {
+                e.currentTarget.style.transform = "translateY(-2px)";
+                e.currentTarget.style.boxShadow = `0 20px 34px -10px ${withAlpha(ACCENT, 0.8)}`;
+              }
             }}
             onMouseLeave={(e) => {
               e.currentTarget.style.transform = "none";
               e.currentTarget.style.boxShadow = `0 14px 28px -10px ${withAlpha(ACCENT, 0.7)}`;
             }}
           >
-            Join family ✨
+            {loading ? "Joining…" : "Join family ✨"}
           </button>
 
           {/* Footer link */}

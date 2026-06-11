@@ -6,7 +6,10 @@ import {
   addDoc,
   updateDoc,
   arrayUnion,
+  arrayRemove,
   doc,
+  getDoc,
+  setDoc,
   writeBatch,
 } from "firebase/firestore";
 import { Baby } from "../../pages/FamilyCreate";
@@ -36,6 +39,7 @@ export const createFamily = async (
 ) => {
   const familyDocRef = await addDoc(collection(fs, "families"), {
     name,
+    adminId: userId,
     invitedUsers: [email], // might not need this
     parents: [userId],
   });
@@ -66,4 +70,24 @@ export const acceptInviteToFamily = async (
   await updateDoc(familyDocRef, {
     parents: arrayUnion(userId),
   });
+};
+
+export const updateFamilyName = async (familyId: string, name: string) => {
+  await updateDoc(doc(fs, "families", familyId), { name });
+};
+
+export const removeFamilyMember = async (familyId: string, userId: string) => {
+  await updateDoc(doc(fs, "families", familyId), { parents: arrayRemove(userId) });
+};
+
+export const updateBaby = async (babyRef: DocumentReference, data: Partial<Baby>) => {
+  await updateDoc(babyRef, data);
+};
+
+export const joinFamily = async (familyId: string, userId: string) => {
+  const familyRef = doc(fs, "families", familyId);
+  const snap = await getDoc(familyRef);
+  if (!snap.exists()) throw new Error("Family not found. Check the code and try again.");
+  await updateDoc(familyRef, { parents: arrayUnion(userId) });
+  await setDoc(doc(fs, "users", userId), { family: familyRef }, { merge: true });
 };

@@ -38,6 +38,28 @@ const blurStyle = {
   background: "rgba(255, 255, 255, 0.75)",
 };
 
+function compressImage(file: File): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onerror = reject;
+    reader.onloadend = () => {
+      const img = new Image();
+      img.onerror = reject;
+      img.onload = () => {
+        const MAX = 400;
+        const scale = Math.min(MAX / img.width, MAX / img.height, 1);
+        const canvas = document.createElement("canvas");
+        canvas.width = Math.round(img.width * scale);
+        canvas.height = Math.round(img.height * scale);
+        canvas.getContext("2d")!.drawImage(img, 0, 0, canvas.width, canvas.height);
+        resolve(canvas.toDataURL("image/jpeg", 0.82));
+      };
+      img.src = reader.result as string;
+    };
+    reader.readAsDataURL(file);
+  });
+}
+
 const BabyForm = ({
   baby,
   index,
@@ -175,9 +197,7 @@ const BabyForm = ({
             const file = e.target.files?.[0];
             if (file) {
               setFileName(file.name);
-              const reader = new FileReader();
-              reader.onloadend = () => setPicture(reader.result as string);
-              reader.readAsDataURL(file);
+              compressImage(file).then(setPicture).catch(console.error);
             }
           }}
         />
@@ -225,7 +245,7 @@ const BabyForm = ({
               whiteSpace: "nowrap",
             }}
           >
-            {fileName || "Add a photo (optional)"}
+            {fileName || (baby.picture ? "Change photo" : "Add a photo (optional)")}
           </span>
         </button>
       </div>
