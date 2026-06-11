@@ -162,13 +162,6 @@ function ActivityRow({
             <span style={{ fontSize: 12, fontWeight: 700, color: "#9a8fb8" }}>
               {statLabel}{sub ? ` · ${sub}` : ""}
             </span>
-            <button
-              type="button"
-              className="view-all-btn activity-mobile-view-all"
-              onClick={(e) => { e.stopPropagation(); onViewAll(); }}
-            >
-              View all ›
-            </button>
           </div>
         </div>
       </div>
@@ -589,7 +582,7 @@ function AllHistorySheet({ babyName, items, loading, onClose }: {
       detail = data.amount ? `${data.name} · ${data.amount}${data.unit}` : data.name;
     } else if (entry.activityKey === "sleep") {
       ts = data.end as Timestamp;
-      detail = `${fmtTime(data.start as Timestamp)} – ${fmtTime(data.end as Timestamp)} · ${fmtDuration(data.start as Timestamp, data.end as Timestamp)}`;
+      detail = `${fmtDuration(data.start as Timestamp, data.end as Timestamp)}`;
     } else {
       ts = data.time as Timestamp;
       detail = (data.type as string).charAt(0).toUpperCase() + (data.type as string).slice(1);
@@ -597,12 +590,12 @@ function AllHistorySheet({ babyName, items, loading, onClose }: {
 
     return (
       <div key={i} className="recent-activity-item">
-        <span style={{
-          display: "inline-flex", alignItems: "center", justifyContent: "center",
-          width: 44, height: 44, borderRadius: 14, fontSize: 22, flexShrink: 0,
-          background: withAlpha(activity.color, 0.16),
-          boxShadow: "inset 0 1px 0 rgba(255,255,255,0.5)",
-        }}>
+        <span 
+          className="recent-activity-item-icon" 
+          style={{
+            background: withAlpha(activity.color, 0.16),
+          }}
+        >
           {activity.emoji}
         </span>
         <div style={{ flex: 1, minWidth: 0 }}>
@@ -878,18 +871,6 @@ const Home = () => {
           {/* Left panel: baby tabs + hero */}
           <div className="home-left-panel">
 
-            {/* Baby tabs */}
-            {!loadingBabies && (
-              <div className="baby-tabs">
-                {babies.map((b, i) => (
-                  <button key={i} className={`baby-tab${i === activeIndex ? " active" : ""}`} onClick={() => setActiveIndex(i)}>
-                    {b.name}
-                  </button>
-                ))}
-                <button className="baby-tab baby-tab-add" type="button" onClick={() => {}}>+</button>
-              </div>
-            )}
-
             {/* Hero */}
             <div className="home-hero">
               <div style={{
@@ -981,6 +962,18 @@ const Home = () => {
           </div>
         </div>
 
+        {/* Recent Activity — mobile only */}
+        <div className="home-recent-activity-mobile">          
+          <div className="recent-activity-card">
+            <button 
+              className="mobile-view-all-history-row" 
+              type="button" 
+              onClick={() => setAllHistoryOpen(true)}
+            >
+              View all history ›
+            </button>
+          </div>
+        </div>
       </div>
 
       {feedingOpen  && <FeedingSheet onClose={() => setFeedingOpen(false)}  onSave={handleFeedSave} />}

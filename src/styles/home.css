@@ -142,7 +142,53 @@
 }
 
 .activity-card-footer {
-  display: none;
+  display: flex;
+  gap: 10px;
+  margin-top: 16px;
+}
+
+.activity-log-btn {
+  flex: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 11px 14px;
+  cursor: pointer;
+  font-family: inherit;
+  font-size: 14.5px;
+  font-weight: 800;
+  color: #fff;
+  border: none;
+  border-radius: 14px;
+  letter-spacing: 0.1px;
+  transition: opacity 0.15s, transform 0.15s;
+}
+
+.activity-log-btn:hover {
+  opacity: 0.88;
+  transform: translateY(-1px);
+}
+
+.activity-log-btn:active {
+  opacity: 0.8;
+  transform: translateY(0);
+}
+
+.activity-view-btn {
+  padding: 11px 16px;
+  cursor: pointer;
+  font-family: inherit;
+  font-size: 14px;
+  font-weight: 800;
+  border: none;
+  border-radius: 14px;
+  white-space: nowrap;
+  transition: opacity 0.15s;
+}
+
+.activity-view-btn:hover {
+  opacity: 0.75;
 }
 
 /* Shimmer loading skeleton */
@@ -529,6 +575,59 @@
   display: none;
 }
 
+/* Styling the "View all history" row button inside the card */
+.mobile-view-all-history-row {
+  display: block;
+  width: 100%;
+  background: none;
+  border: none;
+  outline: none;
+  font-family: inherit;
+  font-size: 14px;
+  font-weight: 800;
+  color: #7b6fa0; /* Matches your timestamp color, adjust if needed */
+  text-align: center;
+  cursor: pointer;
+  border: none;
+  margin-top: 0;
+  padding: 4px 0;
+}
+
+.mobile-view-all-history-row:active {
+  opacity: 0.7;
+}
+
+.recent-activity-card {
+  background: rgba(255, 255, 255, 0.5);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.75);
+  border-radius: 22px;
+  padding: 8px;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.6), 0 16px 40px -22px rgba(76, 52, 120, 0.5);
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.home-recent-activity-mobile {
+  margin-top: 10px;
+}
+
+.recent-activity-item {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 14px 16px;
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.15);
+  text-align: left;
+}
+
+.recent-activity-item-icon {
+  display: none;
+}
+
 /* ── Desktop layout ── */
 @keyframes modalIn {
   from { opacity: 0; transform: translate(-50%, calc(-50% + 10px)) scale(0.98); }
@@ -589,62 +688,6 @@
     align-items: flex-start;
   }
 
-  /* Desktop footer: colorful log button + view all */
-  .activity-card-footer {
-    display: flex;
-    gap: 10px;
-    margin-top: 16px;
-  }
-
-  .activity-log-btn {
-    flex: 1;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    gap: 6px;
-    padding: 11px 14px;
-    cursor: pointer;
-    font-family: inherit;
-    font-size: 14.5px;
-    font-weight: 800;
-    color: #fff;
-    border: none;
-    border-radius: 14px;
-    letter-spacing: 0.1px;
-    transition: opacity 0.15s, transform 0.15s;
-  }
-
-  .activity-log-btn:hover {
-    opacity: 0.88;
-    transform: translateY(-1px);
-  }
-
-  .activity-log-btn:active {
-    opacity: 0.8;
-    transform: translateY(0);
-  }
-
-  .activity-view-btn {
-    padding: 11px 16px;
-    cursor: pointer;
-    font-family: inherit;
-    font-size: 14px;
-    font-weight: 800;
-    border: none;
-    border-radius: 14px;
-    white-space: nowrap;
-    transition: opacity 0.15s;
-  }
-
-  .activity-view-btn:hover {
-    opacity: 0.75;
-  }
-
-  /* Hide the inline "View all" from the header on desktop (footer has it) */
-  .activity-mobile-view-all {
-    display: none;
-  }
-
   /* Recent activity section */
   .home-recent-activity {
     display: block;
@@ -677,29 +720,6 @@
     cursor: pointer;
   }
 
-  .recent-activity-card {
-    background: rgba(255, 255, 255, 0.5);
-    backdrop-filter: blur(12px);
-    -webkit-backdrop-filter: blur(12px);
-    border: 1px solid rgba(255, 255, 255, 0.75);
-    border-radius: 22px;
-    padding: 8px;
-    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.6), 0 16px 40px -22px rgba(76, 52, 120, 0.5);
-    display: flex;
-    flex-direction: column;
-    gap: 4px;
-  }
-
-  .recent-activity-item {
-    display: flex;
-    align-items: center;
-    gap: 14px;
-    padding: 14px 16px;
-    border-radius: 16px;
-    background: rgba(255, 255, 255, 0.15);
-    text-align: left;
-  }
-
   /* All-history modal — wider than other modals */
   .all-history-modal {
     width: 620px;
@@ -722,5 +742,27 @@
 
   .sheet-handle {
     display: none;
+  }
+
+  .home-recent-activity-mobile {
+    display: none;
+  }
+
+  .mobile-view-all-history-row {
+    border-top: 1px solid rgba(71, 58, 104, 0.08); /* Faint top border separator */
+    margin-top: 4px;
+    padding: 14px 0 4px 0;
+  }
+
+  .recent-activity-item-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 44px;
+    height: 44px; 
+    border-radius: 14px; 
+    font-size: 22px; 
+    flex-shrink: 0;
+    box-shadow: inset 0 1px 0 rgba(255,255,255,0.5);
   }
 }

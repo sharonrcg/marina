@@ -263,44 +263,29 @@ const Settings = () => {
         {/* Family name card */}
         <div style={card}>
           {cardIconLabel("🏡", "Family Name")}
-          {isAdmin ? (
-            <>
-              <input
-                style={inputStyle}
-                value={editFamilyName}
-                onChange={(e) => setEditFamilyName(e.target.value)}
-                placeholder="e.g. The Riveras"
-                onFocus={(e) => {
-                  e.target.style.borderColor = withAlpha(ACCENT, 0.55);
-                  e.target.style.boxShadow = `0 0 0 4px ${withAlpha(ACCENT, 0.14)}`;
-                  e.target.style.background = "rgba(255,255,255,0.9)";
-                }}
-                onBlur={(e) => {
-                  e.target.style.borderColor = "rgba(139,92,246,0.18)";
-                  e.target.style.boxShadow = "none";
-                  e.target.style.background = "rgba(255,255,255,0.75)";
-                }}
-              />
-              <button
-                onClick={handleSaveFamilyName}
-                disabled={savingFamilyName || !editFamilyName.trim()}
-                style={ghostBtn(familySaved)}
-              >
-                {savingFamilyName ? "Saving…" : familySaved ? "Saved ✓" : "Save name"}
-              </button>
-            </>
-          ) : (
-            <div style={{
-              padding: "13px 16px",
-              fontSize: 16,
-              fontWeight: 600,
-              color: "#4a3d6b",
-              background: "rgba(255,255,255,0.55)",
-              borderRadius: 14,
-            }}>
-              {editFamilyName || "—"}
-            </div>
-          )}
+          <input
+            style={inputStyle}
+            value={editFamilyName}
+            onChange={(e) => setEditFamilyName(e.target.value)}
+            placeholder="e.g. The Riveras"
+            onFocus={(e) => {
+              e.target.style.borderColor = withAlpha(ACCENT, 0.55);
+              e.target.style.boxShadow = `0 0 0 4px ${withAlpha(ACCENT, 0.14)}`;
+              e.target.style.background = "rgba(255,255,255,0.9)";
+            }}
+            onBlur={(e) => {
+              e.target.style.borderColor = "rgba(139,92,246,0.18)";
+              e.target.style.boxShadow = "none";
+              e.target.style.background = "rgba(255,255,255,0.75)";
+            }}
+          />
+          <button
+            onClick={handleSaveFamilyName}
+            disabled={savingFamilyName || !editFamilyName.trim()}
+            style={ghostBtn(familySaved)}
+          >
+            {savingFamilyName ? "Saving…" : familySaved ? "Saved ✓" : "Save name"}
+          </button>       
         </div>
 
         {/* Members card */}
