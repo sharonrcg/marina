@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import "../styles/home.css";
 import { getBabies, getUserProfile, getLinkedFamily } from "../firebase/firestore/user";
 import { AuthContext } from "../context/AuthContext";
-import { DocumentData, DocumentReference, Timestamp } from "firebase/firestore";
+import { DocumentData, DocumentReference, Timestamp, deleteDoc } from "firebase/firestore";
 import { addFeeding, getLatestFeeding, getFeedings } from "../firebase/firestore/feedings";
 import { addVitamin, getLatestVitamin, getVitamins } from "../firebase/firestore/vitamins";
 import { addSleep, getLatestSleep, getSleeps } from "../firebase/firestore/sleep";
@@ -85,10 +85,10 @@ function nowTimeStr() {
   return `${String(now.getHours()).padStart(2, "0")}:${String(now.getMinutes()).padStart(2, "0")}`;
 }
 
-function timeStrToTimestamp(str: string): Timestamp {
+function timeStrToTimestamp(str: string, dayOffset = 0): Timestamp {
   const [h, m] = str.split(":").map(Number);
   const now = new Date();
-  return Timestamp.fromDate(new Date(now.getFullYear(), now.getMonth(), now.getDate(), h, m));
+  return Timestamp.fromDate(new Date(now.getFullYear(), now.getMonth(), now.getDate() + dayOffset, h, m));
 }
 
 function babyEmoji(gender?: string): string {
@@ -378,8 +378,11 @@ function SleepSheet({ onClose, onSave }: {
   });
   const [endStr, setEndStr] = useState(nowTimeStr);
 
+  const [startH, startM] = startStr.split(":").map(Number);
+  const [endH, endM] = endStr.split(":").map(Number);
+  const endIsNextDay = endH * 60 + endM < startH * 60 + startM;
   const start = timeStrToTimestamp(startStr);
-  const end = timeStrToTimestamp(endStr);
+  const end = timeStrToTimestamp(endStr, endIsNextDay ? 1 : 0);
   const durMs = end.toDate().getTime() - start.toDate().getTime();
   const durationPreview = durMs > 0 ? fmtDuration(start, end) : null;
 
@@ -405,7 +408,10 @@ function SleepSheet({ onClose, onSave }: {
           <input className="sheet-time-input" style={{ marginTop: 0 }} type="time" value={startStr} onChange={(e) => setStartStr(e.target.value)} />
         </div>
         <div className="sheet-field" style={{ flex: 1, marginBottom: 0 }}>
-          <div className="sheet-label">End time</div>
+          <div className="sheet-label" style={{ display: "flex", alignItems: "center", gap: 6 }}>
+            End time
+            {endIsNextDay && <span style={{ fontSize: 11, fontWeight: 800, color: "#8b5cf6", background: "rgba(139,92,246,0.1)", borderRadius: 6, padding: "1px 6px" }}>next day</span>}
+          </div>
           <input className="sheet-time-input" style={{ marginTop: 0 }} type="time" value={endStr} onChange={(e) => setEndStr(e.target.value)} />
         </div>
       </div>
@@ -477,54 +483,71 @@ function DiaperSheet({ onClose, onSave }: {
 
 // ─── HistorySheet ─────────────────────────────────────────────────────────────
 
-function HistoryItem({ children }: { children: React.ReactNode }) {
-  return <div className="history-item">{children}</div>;
+function HistoryItem({ children, onDelete }: { children: React.ReactNode; onDelete: () => void }) {
+  return (
+    <div className="history-item">
+      <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, minWidth: 0 }}>
+        {children}
+      </div>
+      <button
+        onClick={onDelete}
+        style={{ flexShrink: 0, background: "none", border: "none", padding: "4px 6px", cursor: "pointer", fontSize: 15, color: "#d1c4e9", lineHeight: 1 }}
+      >
+        ✕
+      </button>
+    </div>
+  );
 }
 
-function HistorySheet({ activityKey, items, loading, onClose }: {
-  activityKey: ActivityKey; items: DocumentData[]; loading: boolean; onClose: () => void;
+function HistorySheet({ activityKey, items, loading, onClose, onDelete }: {
+  activityKey: ActivityKey;
+  items: { data: DocumentData; ref: DocumentReference }[];
+  loading: boolean;
+  onClose: () => void;
+  onDelete: (ref: DocumentReference, idx: number) => void;
 }) {
   const activity = ACTIVITIES.find((a) => a.key === activityKey)!;
 
-  const renderItem = (item: DocumentData, i: number) => {
+  const renderItem = (item: { data: DocumentData; ref: DocumentReference }, i: number) => {
+    const { data } = item;
     if (activityKey === "feed") {
-      const ts = item.time as Timestamp;
-      const detail = item.type === "solids"
-        ? (item.notes || "Solids")
-        : `${item.amount ?? ""}${item.unit ?? ""} · ${item.type}`;
+      const ts = data.time as Timestamp;
+      const detail = data.type === "solids"
+        ? (data.notes || "Solids")
+        : `${data.amount ?? ""}${data.unit ?? ""} · ${data.type}`;
       return (
-        <HistoryItem key={i}>
+        <HistoryItem key={i} onDelete={() => onDelete(item.ref, i)}>
           <span className="history-time">{fmtDateTime(ts)}</span>
           <span className="history-detail">{detail}</span>
         </HistoryItem>
       );
     }
     if (activityKey === "pump") {
-      const ts = item.time as Timestamp;
-      const detail = item.amount ? `${item.name} · ${item.amount}${item.unit}` : item.name;
+      const ts = data.time as Timestamp;
+      const detail = data.amount ? `${data.name} · ${data.amount}${data.unit}` : data.name;
       return (
-        <HistoryItem key={i}>
+        <HistoryItem key={i} onDelete={() => onDelete(item.ref, i)}>
           <span className="history-time">{fmtDateTime(ts)}</span>
           <span className="history-detail">{detail}</span>
         </HistoryItem>
       );
     }
     if (activityKey === "sleep") {
-      const start = item.start as Timestamp;
-      const end = item.end as Timestamp;
+      const start = data.start as Timestamp;
+      const end = data.end as Timestamp;
       return (
-        <HistoryItem key={i}>
+        <HistoryItem key={i} onDelete={() => onDelete(item.ref, i)}>
           <span className="history-time">{fmtDateTime(end)}</span>
           <span className="history-detail">{fmtTime(start)} – {fmtTime(end)} · {fmtDuration(start, end)}</span>
         </HistoryItem>
       );
     }
     if (activityKey === "diaper") {
-      const ts = item.time as Timestamp;
+      const ts = data.time as Timestamp;
       return (
-        <HistoryItem key={i}>
+        <HistoryItem key={i} onDelete={() => onDelete(item.ref, i)}>
           <span className="history-time">{fmtDateTime(ts)}</span>
-          <span className="history-detail" style={{ textTransform: "capitalize" }}>{item.type}</span>
+          <span className="history-detail" style={{ textTransform: "capitalize" }}>{data.type}</span>
         </HistoryItem>
       );
     }
@@ -563,10 +586,11 @@ function HistorySheet({ activityKey, items, loading, onClose }: {
 
 // ─── AllHistorySheet ──────────────────────────────────────────────────────────
 
-type AllHistoryEntry = { activityKey: ActivityKey; data: DocumentData };
+type AllHistoryEntry = { activityKey: ActivityKey; data: DocumentData; ref: DocumentReference };
 
-function AllHistorySheet({ babyName, items, loading, onClose }: {
+function AllHistorySheet({ babyName, items, loading, onClose, onDelete }: {
   babyName: string; items: AllHistoryEntry[]; loading: boolean; onClose: () => void;
+  onDelete: (ref: DocumentReference, idx: number) => void;
 }) {
   const renderItem = (entry: AllHistoryEntry, i: number) => {
     const activity = ACTIVITIES.find((a) => a.key === entry.activityKey)!;
@@ -590,12 +614,7 @@ function AllHistorySheet({ babyName, items, loading, onClose }: {
 
     return (
       <div key={i} className="recent-activity-item">
-        <span 
-          className="recent-activity-item-icon" 
-          style={{
-            background: withAlpha(activity.color, 0.16),
-          }}
-        >
+        <span className="recent-activity-item-icon" style={{ background: withAlpha(activity.color, 0.16) }}>
           {activity.emoji}
         </span>
         <div style={{ flex: 1, minWidth: 0 }}>
@@ -603,6 +622,12 @@ function AllHistorySheet({ babyName, items, loading, onClose }: {
           <div style={{ fontSize: 13, fontWeight: 700, color: "#9a8fb8", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{detail}</div>
         </div>
         <div style={{ fontSize: 13, fontWeight: 700, color: "#7b6fa0", flexShrink: 0, textAlign: "right" }}>{fmtDateTime(ts)}</div>
+        <button
+          onClick={() => onDelete(entry.ref, i)}
+          style={{ flexShrink: 0, background: "none", border: "none", padding: "4px 6px", cursor: "pointer", fontSize: 15, color: "#d1c4e9", lineHeight: 1 }}
+        >
+          ✕
+        </button>
       </div>
     );
   };
@@ -664,7 +689,7 @@ const Home = () => {
   const [sleepOpen,    setSleepOpen]    = useState(false);
   const [diaperOpen,   setDiaperOpen]   = useState(false);
   const [historyKey,   setHistoryKey]   = useState<ActivityKey | null>(null);
-  const [historyItems, setHistoryItems] = useState<DocumentData[]>([]);
+  const [historyItems, setHistoryItems] = useState<{ data: DocumentData; ref: DocumentReference }[]>([]);
   const [loadingHistory, setLoadingHistory] = useState(false);
 
   const [allHistoryOpen,    setAllHistoryOpen]    = useState(false);
@@ -727,14 +752,14 @@ const Home = () => {
     if (!historyKey || !babyRef) return;
     setLoadingHistory(true);
     setHistoryItems([]);
-    const fetchers: Record<ActivityKey, () => Promise<{ docs: { data: () => DocumentData }[] }>> = {
+    const fetchers: Record<ActivityKey, () => Promise<{ docs: { data: () => DocumentData; ref: DocumentReference }[] }>> = {
       feed:   () => getFeedings(babyRef),
       pump:   () => getVitamins(babyRef),
       sleep:  () => getSleeps(babyRef),
       diaper: () => getDiapers(babyRef),
     };
     fetchers[historyKey]()
-      .then((r) => setHistoryItems(r.docs.map((d) => d.data())))
+      .then((r) => setHistoryItems(r.docs.map((d) => ({ data: d.data(), ref: d.ref }))))
       .catch(() => {})
       .finally(() => setLoadingHistory(false));
   }, [historyKey, babyRef?.path]);
@@ -745,10 +770,10 @@ const Home = () => {
     setLoadingAllHistory(true);
     setAllHistoryItems([]);
     Promise.all([
-      getFeedings(babyRef).then((r) => r.docs.map((d): AllHistoryEntry => ({ activityKey: "feed",   data: d.data() }))),
-      getVitamins(babyRef).then((r) => r.docs.map((d): AllHistoryEntry => ({ activityKey: "pump",   data: d.data() }))),
-      getSleeps(babyRef).then((r)   => r.docs.map((d): AllHistoryEntry => ({ activityKey: "sleep",  data: d.data() }))),
-      getDiapers(babyRef).then((r)  => r.docs.map((d): AllHistoryEntry => ({ activityKey: "diaper", data: d.data() }))),
+      getFeedings(babyRef).then((r) => r.docs.map((d): AllHistoryEntry => ({ activityKey: "feed",   data: d.data(), ref: d.ref }))),
+      getVitamins(babyRef).then((r) => r.docs.map((d): AllHistoryEntry => ({ activityKey: "pump",   data: d.data(), ref: d.ref }))),
+      getSleeps(babyRef).then((r)   => r.docs.map((d): AllHistoryEntry => ({ activityKey: "sleep",  data: d.data(), ref: d.ref }))),
+      getDiapers(babyRef).then((r)  => r.docs.map((d): AllHistoryEntry => ({ activityKey: "diaper", data: d.data(), ref: d.ref }))),
     ])
       .then(([feeds, vitamins, sleeps, diapers]) => {
         const all = [...feeds, ...vitamins, ...sleeps, ...diapers];
@@ -773,6 +798,40 @@ const Home = () => {
     document.addEventListener("mousedown", handler);
     return () => document.removeEventListener("mousedown", handler);
   }, [switcherOpen]);
+
+  const updateLastMap = (key: ActivityKey, babyPath: string, newData: DocumentData | null) => {
+    if (key === "feed")   setLastFedMap((p)    => ({ ...p, [babyPath]: newData }));
+    if (key === "pump")   setLastVitMap((p)    => ({ ...p, [babyPath]: newData }));
+    if (key === "sleep")  setLastSleepMap((p)  => ({ ...p, [babyPath]: newData }));
+    if (key === "diaper") setLastDiaperMap((p) => ({ ...p, [babyPath]: newData }));
+  };
+
+  const handleDeleteHistoryItem = async (ref: DocumentReference, idx: number) => {
+    if (!babyRef || !historyKey) return;
+    try {
+      await deleteDoc(ref);
+      const next = historyItems.filter((_, i) => i !== idx);
+      setHistoryItems(next);
+      // If we deleted the most recent entry, update the activity card
+      if (idx === 0) updateLastMap(historyKey, babyRef.path, next[0]?.data ?? null);
+    } catch {}
+  };
+
+  const handleDeleteAllHistoryItem = async (ref: DocumentReference, idx: number) => {
+    if (!babyRef) return;
+    try {
+      await deleteDoc(ref);
+      const deletedKey = allHistoryItems[idx].activityKey;
+      const next = allHistoryItems.filter((_, i) => i !== idx);
+      setAllHistoryItems(next);
+      // If we deleted the most recent entry for this activity type, update the activity card
+      const wasLatest = allHistoryItems.findIndex((e) => e.activityKey === deletedKey) === idx;
+      if (wasLatest) {
+        const nextOfType = next.find((e) => e.activityKey === deletedKey);
+        updateLastMap(deletedKey, babyRef.path, nextOfType?.data ?? null);
+      }
+    } catch {}
+  };
 
   const showToast = (label: string, emoji: string) => {
     setToast({ label, emoji });
@@ -1090,6 +1149,7 @@ const Home = () => {
           items={historyItems}
           loading={loadingHistory}
           onClose={() => { setHistoryKey(null); setHistoryItems([]); }}
+          onDelete={handleDeleteHistoryItem}
         />
       )}
       {allHistoryOpen && (
@@ -1098,6 +1158,7 @@ const Home = () => {
           items={allHistoryItems}
           loading={loadingAllHistory}
           onClose={() => { setAllHistoryOpen(false); setAllHistoryItems([]); }}
+          onDelete={handleDeleteAllHistoryItem}
         />
       )}
 
