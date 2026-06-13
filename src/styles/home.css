@@ -633,6 +633,11 @@
   display: none;
 }
 
+.home-body {
+  position: relative;
+  z-index: 1;
+}
+
 /* ── Desktop layout ── */
 @keyframes modalIn {
   from { opacity: 0; transform: translate(-50%, calc(-50% + 10px)) scale(0.98); }
